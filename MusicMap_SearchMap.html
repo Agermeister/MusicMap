@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Explore local music history with the Music Map</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.48.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.48.0/mapbox-gl.css' rel='stylesheet' />
+    <link href='https://fonts.googleapis.com/css?family=Patua+One&display=swap' rel='stylesheet'>
+    <style>
+        body { 
+			margin:0; 
+			padding:0; 
+			background-color: #ff0000;
+			}
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+ <script src='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v2.0.1/mapbox-gl-geocoder.js'></script>
+<link rel='stylesheet' href='https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v2.0.1/mapbox-gl-geocoder.css' type='text/css' />
+
+<style>
+#map {
+    position:absolute;
+    left:25%;
+    top:6%;
+    bottom:0;
+    width: 75%;
+}
+.topbar {
+	position:absolute;
+	font: 110% 'Helvetica Neue', Arial, Helvetica, sans-serif;
+	font-family: Patua One !important;
+	font-weight: bold;
+	color: #FFFFFF;
+    margin: 0.4% 1% 1% 1%;
+}
+.map-overlay {
+    position: absolute;
+    width: 25%;
+    top: 6%;
+    bottom: 0;
+    left: 0;
+    font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+    background-color: #fff;
+    max-height: 100%;
+    overflow: hidden;
+}
+
+.map-overlay fieldset {
+    display: none;
+    background: #ddd;
+    border: none;
+    padding: 10px;
+    margin: 0;
+}
+
+.map-overlay input {
+    display: block;
+    border: none;
+    width: 80%;
+    border-radius: 3px;
+    padding: 10px;
+    margin: 0;
+}
+
+.map-overlay .listing {
+    overflow: auto;
+    max-height: 100%;
+}
+
+.map-overlay .listing > * {
+    display: block;
+    padding: 5px 10px;
+    margin: 0;
+}
+
+.map-overlay .listing a {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    color: #404;
+    text-decoration: none;
+}
+
+.map-overlay .listing a:last-child {
+    border: none;
+}
+
+.map-overlay .listing a:hover {
+    background: #f0f0f0;
+}
+
+.mapboxgl-popup {
+    max-width: 35%;
+    font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+}
+
+ul {
+	list-style-type: none;
+	padding-left: 0;	
+	margin:0; padding:0; 
+}
+
+</style>
+
+<div class='topbar'>
+	Music Map - Explore
+</div>
+
+<div id='map'>
+    <a href="http://www.themapden.co.uk" target="_blank" style="
+    position:absolute;
+    left:5px; bottom:5px;
+    z-index:99999;
+    display:block;
+    width:20%;
+    height:20%;
+    background-position:0px 10px;
+    text-indent:-9999px;
+    overflow:hidden;
+    background-repeat:no-repeat;
+    background-image:url('http://themapden.co.uk/wp-content/uploads/2017/02/cropped-cropped-mapdenlogo1-e1488844082173.png');
+  ">TheMapDen</a></div>
+
+<div class='map-overlay'>
+    <fieldset>
+        <input id='feature-filter' type='text' placeholder='Filter results by name' />
+    </fieldset>
+    <div id='feature-listing' class='listing'></div>
+
+</div>
+
+<script>
+mapboxgl.accessToken = 'pk.eyJ1IjoiYWdlcm1laXN0ZXIiLCJhIjoiZjJmY2VkNWU1MDc1Y2NjNGM3ZGI2MTk1OTAyMGE3YmYifQ.HTI5TRmAfbZBARLK_0MfLA';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/agermeister/cjyoy65op0jvd1cnstmwzc78d',
+    center: [-3.5, 53.131658],
+	zoom: 1,
+	pitch: 0
+});
+
+// Holds visible airport features for filtering
+var artists = [];
+
+// Create a popup, but don't add it to the map yet.
+var popup = new mapboxgl.Popup({
+    closeButton: false
+});
+
+var filterEl = document.getElementById('feature-filter');
+var listingEl = document.getElementById('feature-listing');
+
+function renderListings(features) {
+    // Clear any existing listings
+    listingEl.innerHTML = '';
+    if (features.length) {
+        features.forEach(function(feature) {
+            var prop = feature.properties;
+            var item = document.createElement('a');
+            //item.href = "https://open.spotify.com/search/results/" + prop.title;
+            //item.target = '_blank';
+            item.textContent = prop.title;
+            item.addEventListener('click', function() {
+                // Highlight corresponding feature on the map
+                map.flyTo({center: feature.geometry.coordinates, zoom: 12})
+                
+                popup.setLngLat(feature.geometry.coordinates)
+				.setHTML('<div id="popup" class="popup" style="z-index: 10;">' +
+            '<ul class="list-group">' +
+			'<li class="list-group-item"> Artist: ' + feature.properties['title'] + " </li>" + 
+            '<li class="list-group-item"> UK Top40 Appearances: ' + feature.properties['ChartAppearancesTop40'] + " </li>" +
+			'<li class="list-group-item"> First Chart Appearance: ' + feature.properties['FirstChartDate'] + " </li>" +
+            '<li class="list-group-item"> Genre: ' + feature.properties['Genre'] + " </li>" +
+			'<li class="list-group-item"> Sub Genre: ' + feature.properties['Sub Genre'] + " </li>" +
+            '<li class="list-group-item"> Description: ' + feature.properties['description'] + " </li>" + '</ul> </div>')
+                    .addTo(map);
+            });
+            listingEl.appendChild(item);
+        });
+
+        // Show the filter input
+        filterEl.parentNode.style.display = 'block';
+    } else {
+        var empty = document.createElement('p');
+        empty.textContent = 'Drag the map to populate results';
+        listingEl.appendChild(empty);
+
+        // Hide the filter input
+        filterEl.parentNode.style.display = 'none';
+
+        // remove features filter
+        map.setFilter('m-artist', ['has', 'title']);
+    }
+}
+
+function normalize(string) {
+    return string.trim().toLowerCase();
+}
+
+function getUniqueFeatures(array, comparatorProperty) {
+    var existingFeatureKeys = {};
+    // Because features come from tiled vector data, feature geometries may be split
+    // or duplicated across tile boundaries and, as a result, features may appear
+    // multiple times in query results.
+    var uniqueFeatures = array.filter(function(el) {
+        if (existingFeatureKeys[el.properties[comparatorProperty]]) {
+            return false;
+        } else {
+            existingFeatureKeys[el.properties[comparatorProperty]] = true;
+            return true;
+        }
+    });
+
+    return uniqueFeatures;
+}
+
+map.on('load', function() {
+	
+	map.addControl(new MapboxGeocoder({
+    accessToken: mapboxgl.accessToken
+		}));
+
+// Add geolocate control to the map.
+	map.addControl(new mapboxgl.GeolocateControl({
+		positionOptions: {
+			enableHighAccuracy: true
+		},
+		trackUserLocation: true
+	}));
+
+	var full = new mapboxgl.FullscreenControl();
+	map.addControl(full, 'bottom-right');
+
+	// Add zoom and rotation controls to the map.
+	var nav = new mapboxgl.NavigationControl();
+	map.addControl(nav, 'bottom-right');
+        
+    map.addLayer({
+        "id": "m-artist",
+        "source": {
+            "type": "vector",
+            "url": "mapbox://agermeister.ciua6oq0n00062togix7c6dny-2ktwm"
+        },
+        "source-layer": "v2_MusicMap_102016_Phase2",
+        "type": "symbol",
+        "layout": {
+            "icon-image": "002-music-25",
+            "icon-size": [
+        "interpolate", ["linear"], ["zoom"],
+        // zoom is 5 (or less) -> 
+        5, 0,
+        // zoom is 11 (or less) -> 
+        11, 0.05,
+        // zoom is 12.5 (or greater) -> 
+        12.1, 0.30
+    ],
+            "icon-padding": 0,
+            "text-allow-overlap":true,
+            "icon-allow-overlap":true,
+            "text-field": "{title}",
+			"text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+			"text-size": [
+        "interpolate", ["linear"], ["zoom"],
+        // zoom is 11 (or less) -> 
+        10.5, 0,
+        // zoom is 12.1 (or greater) -> 
+        11.5, 11
+    ],
+			"text-letter-spacing": 0.05,
+			"text-offset": [0, 2]
+        },
+        "paint": {
+			"text-color": "#FFFFFF",
+			"text-halo-color": "#000000",
+			"text-halo-width": 1.75
+		}
+	});
+
+    map.on('moveend', function() {
+        var features = map.queryRenderedFeatures({layers:['m-artist']});
+
+        if (features) {
+            var uniqueFeatures = getUniqueFeatures(features, "title");
+            // Populate features for the listing overlay.
+            renderListings(uniqueFeatures);
+
+            // Clear the input container
+            filterEl.value = '';
+
+            // Store the current features in sn `artists` variable to
+            // later use for filtering on `keyup`.
+            artists = uniqueFeatures;
+        }
+    });
+
+    map.on('click', 'm-artist', function(e) {
+        // Change the cursor style as a UI indicator.
+        map.getCanvas().style.cursor = 'pointer';
+
+        // Populate the popup and set its coordinates based on the feature.
+        var feature = e.features[0];
+        popup.setLngLat(feature.geometry.coordinates)
+            .setHTML('<div id="popup" class="popup" style="z-index: 10;">' +
+            '<ul class="list-group">' +
+			'<li class="list-group-item"> Artist: ' + feature.properties['title'] + " </li>" + 
+            '<li class="list-group-item"> UK Top40 Appearances: ' + feature.properties['ChartAppearancesTop40'] + " </li>" +
+			'<li class="list-group-item"> First Chart Appearance: ' + feature.properties['FirstChartDate'] + " </li>" +
+            '<li class="list-group-item"> Genre: ' + feature.properties['Genre'] + " </li>" +
+			'<li class="list-group-item"> Sub Genre: ' + feature.properties['Sub Genre'] + " </li>" +
+            '<li class="list-group-item"> Description: ' + feature.properties['description'] + " </li>" + '</ul> </div>')
+            .addTo(map);
+    });
+
+    //map.on('mouseleave', 'm-artist', function() {
+        //map.getCanvas().style.cursor = '';
+        //popup.remove();
+    //});
+
+    filterEl.addEventListener('keyup', function(e) {
+        var value = normalize(e.target.value);
+
+        // Filter visible features that don't match the input value.
+        var filtered = artists.filter(function(feature) {
+            var name = normalize(feature.properties.title);
+            return name.indexOf(value) > -1;
+        });
+
+        // Populate the sidebar with filtered results
+        renderListings(filtered);
+
+        // Set the filter to populate features into the layer.
+        map.setFilter('m-artist', ['match', ['get', 'title'], filtered.map(function(feature) {
+            return feature.properties.title;
+        }), true, false]);
+    });
+
+    // Call this function on initialization
+    // passing an empty array to render an empty state
+    renderListings([]);
+
+
+});
+
+</script>
+
+</body>
+</html>
